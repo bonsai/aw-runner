@@ -1,0 +1,16 @@
+{
+  "nodes": [
+    {"id":"soubi.tui","type":"tui"},
+    {"id":"aw","type":"workflow"},
+    {"id":"repo-coordinator","type":"agent"},
+    {"id":"bonsai/repos","type":"repo"},
+    {"id":"bigquery-bqml","type":"data-ml"}
+  ],
+  "edges": [
+    {"from":"soubi.tui","to":"aw","event":"run"},
+    {"from":"aw","to":"repo-coordinator","event":"delegate"},
+    {"from":"repo-coordinator","to":"bonsai/repos","event":"coordinate"},
+    {"from":"bonsai/repos","to":"bigquery-bqml","event":"analyze"},
+    {"from":"bigquery-bqml","to":"repo-coordinator","event":"organize"}
+  ]
+}

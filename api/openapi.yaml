@@ -1,0 +1,175 @@
+openapi: 3.1.0
+info:
+  title: aw-api
+  version: 0.1.0
+  description: aw — GitHub Agentic Workflows の REST 表面（DB キュー → gh aw run ディスパッチ）
+servers:
+  - url: https://aw-api.example.internal/v1
+security:
+  - iam: []
+paths:
+  /tasks:
+    post:
+      operationId: createTask
+      summary: ワークフロー実行タスクを enqueue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskRequest"
+      responses:
+        "202":
+          description: accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+    get:
+      operationId: listTasks
+      summary: タスク一覧
+      parameters:
+        - $ref: "#/components/parameters/Status"
+        - $ref: "#/components/parameters/Workflow"
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Task" }
+  /tasks/{id}:
+    get:
+      operationId: getTask
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200": { $ref: "#/components/responses/Task" }
+        "404": { $description: not found }
+    delete:
+      operationId: cancelTask
+      summary: キュー中のタスクをキャンセル
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "204": { $description: cancelled }
+  /tasks/{id}/result:
+    get:
+      operationId: getTaskResult
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Result JSON（safe-outputs 成果物）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Result"
+  /workflows/{id}/validate:
+    post:
+      operationId: validateWorkflow
+      summary: gh aw validate（compile 前 lint）
+      parameters:
+        - $ref: "#/components/parameters/WorkflowId"
+      responses:
+        "200": { $description: validation report }
+  /workflows/{id}/compile:
+    post:
+      operationId: compileWorkflow
+      summary: gh aw compile → lock.yml 生成/更新（PR は別途）
+      parameters:
+        - $ref: "#/components/parameters/WorkflowId"
+      responses:
+        "202": { $description: compilled }
+  /forecast:
+    get:
+      operationId: forecast
+      summary: gh aw forecast — AIC 消費予測
+      parameters:
+        - $ref: "#/components/parameters/Workflow"
+      responses:
+        "200": { $description: AIC forecast }
+  /healthz:
+    get:
+      operationId: health
+      responses:
+        "200": { $description: ok }
+components:
+  securitySchemes:
+    iam:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://oauth2.googleapis.com/token
+  parameters:
+    TaskId:
+      in: path
+      name: id
+      required: true
+      schema: { type: string, format: uuid }
+    Status:
+      in: query
+      name: status
+      required: false
+      schema:
+        type: string
+        enum: [queued, claimed, dispatched, running, completed, failed, canceled]
+    Workflow:
+      in: query
+      name: workflow
+      required: false
+      schema: { type: string }
+    WorkflowId:
+      in: path
+      name: id
+      required: true
+      schema: { type: string }
+  responses:
+    Task:
+      description: task
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Task" }
+  schemas:
+    TaskRequest:
+      type: object
+      required: [workflow]
+      properties:
+        workflow: { type: string, example: addTopics }
+        owner_repo: { type: string, default: bonsai/aw, example: bonsai/aw }
+        engine: { type: string, enum: [claude, codex, copilot, gemini, pi], default: claude }
+        inputs:
+          type: object
+          additionalProperties: true
+          description: workflow_dispatch の raw fields
+        max_aic:
+          type: number
+          description: コストガード上限（未指定=repo既定）
+        schedule:
+          type: string
+          description: "none | cron 式（未実装: 展開用）"
+    Task:
+      type: object
+      required: [id, workflow, status]
+      properties:
+        id: { type: string, format: uuid }
+        workflow: { type: string }
+        owner_repo: { type: string }
+        engine: { type: string }
+        status:
+          type: string
+          enum: [queued, claimed, dispatched, running, completed, failed, canceled]
+        inputs: { type: object, additionalProperties: true }
+        gh_run_id: { type: integer, nullable: true }
+        gh_run_url: { type: string, nullable: true }
+        aic_used: { type: number, nullable: true }
+        created_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time, nullable: true }
+    Result:
+      type: object
+      additionalProperties: true
+      description: safe-outputs 成果物の検証済 Result JSON

@@ -1,0 +1,6 @@
+flowchart LR
+    SOUBI["soubi.tui"] --> AW["AW"]
+    AW --> COORD["Repo Coordinator"]
+    COORD --> REPOS["bonsai/repos"]
+    REPOS --> BQ["BigQuery / BQML"]
+    BQ --> COORD

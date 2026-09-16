@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/bonsai/aw/blob/main/api/task.schema.json",
+  "title": "aw Task",
+  "description": "aw-api のデキュー対象 Task と Result の契約（bonsai/gh-aw result 契約と整合）",
+  "type": "object",
+  "definitions": {
+    "taskRequest": {
+      "type": "object",
+      "required": ["workflow"],
+      "additionalProperties": false,
+      "properties": {
+        "workflow": { "type": "string", "examples": ["addTopics"] },
+        "owner_repo": { "type": "string", "default": "bonsai/aw" },
+        "engine": { "type": "string", "enum": ["claude", "codex", "copilot", "gemini", "pi"], "default": "claude" },
+        "inputs": { "type": "object", "additionalProperties": true },
+        "max_aic": { "type": "number", "description": "コストガード上限" },
+        "schedule": { "type": "string", "description": "none | cron（展開用）" }
+      }
+    },
+    "task": {
+      "allOf": [{ "$ref": "#/definitions/taskRequest" }],
+      "type": "object",
+      "required": ["id", "status"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "status": {
+          "type": "string",
+          "enum": ["queued", "claimed", "dispatched", "running", "completed", "failed", "canceled"]
+        },
+        "gh_run_id": { "type": ["integer", "null"] },
+        "gh_run_url": { "type": ["string", "null"] },
+        "aic_used": { "type": ["number", "null"] },
+        "error": { "type": ["string", "null"] },
+        "created_at": { "type": "string", "format": "date-time" },
+        "claimed_at": { "type": ["string", "null"], "format": "date-time" },
+        "completed_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "result": {
+      "type": "object",
+      "description": "safe-outputs 成果物（検証済 evidence）。bonsai/gh-aw result 契約に準拠",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["create-issue", "create-pull-request", "create-discussion", "update-issue", "add-issue-comment", "noop"]
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true }
+        },
+        "note": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    }
+  }
+}
