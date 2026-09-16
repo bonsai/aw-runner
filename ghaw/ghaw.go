@@ -137,6 +137,34 @@ func Run(repo, workflow string, dryRun bool, fields []string) ([]RunResult, erro
 	return res, nil
 }
 
+// Compile runs `gh aw compile` on local agentic workflow markdown files,
+// converting them into GitHub Actions YAML (*.lock.yml) beside the source.
+// Returns the compiler report (stdout + stderr merged).
+func Compile(workflows []string, dir string, actionlint bool) (string, error) {
+	args := []string{"compile"}
+	for _, w := range workflows {
+		args = append(args, w)
+	}
+	if dir != "" {
+		args = append(args, "--dir", dir)
+	}
+	if actionlint {
+		args = append(args, "--actionlint")
+	}
+	out, stderr, err := Exec(args...)
+	if err != nil {
+		return "", err
+	}
+	report := strings.TrimSpace(string(out))
+	if s := strings.TrimSpace(stderr); s != "" {
+		if report != "" {
+			report += "\n"
+		}
+		report += s
+	}
+	return report, nil
+}
+
 // Logs downloads and analyzes workflow run logs/artifacts via `gh aw logs`.
 // The overview report is returned; artifacts are extracted into <dir>.
 func Logs(repo, workflow, dir string) (string, error) {

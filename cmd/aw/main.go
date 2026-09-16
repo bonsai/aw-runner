@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/bonsai/aw-runner/ghaw"
@@ -107,7 +109,42 @@ func main() {
 	}
 	logsCmd.Flags().StringP("output", "o", "", "output directory for extracted artifacts")
 
-	root.AddCommand(listCmd, statusCmd, runCmd, logsCmd)
+	compileCmd := &cobra.Command{
+		Use:   "compile <workflow>...",
+		Short: "Compile agentic workflow md → wf.yaml (gh aw compile)",
+		Long:  "Compiles local agentic workflow markdown files (e.g. issue.md) into GitHub Actions YAML (*.lock.yml) in the workflow directory.",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			dir, _ := cmd.Flags().GetString("dir")
+			lint, _ := cmd.Flags().GetBool("actionlint")
+			out, _ := cmd.Flags().GetString("out")
+			if out != "" && len(args) != 1 {
+				return fmt.Errorf("--out は 1 つの workflow のみに使える（%d 個指定）", len(args))
+			}
+			report, err := ghaw.Compile(args, dir, lint)
+			if err != nil {
+				return err
+			}
+			fmt.Println(report)
+			if out != "" {
+				workDir := dir
+				if workDir == "" {
+					workDir = ".github/workflows"
+				}
+				src := filepath.Join(workDir, args[0]+".lock.yml")
+				if err := copyFile(src, out); err != nil {
+					return fmt.Errorf("copy compiled workflow: %w", err)
+				}
+				fmt.Printf("→ %s\n", out)
+			}
+			return nil
+		},
+	}
+	compileCmd.Flags().String("dir", "", "workflow directory (default .github/workflows)")
+	compileCmd.Flags().Bool("actionlint", false, "run actionlint on generated .lock.yml files")
+	compileCmd.Flags().StringP("out", "o", "", "copy the compiled workflow to this file (e.g. wf.yaml)")
+
+	root.AddCommand(listCmd, statusCmd, runCmd, compileCmd, logsCmd)
 	if err := root.Execute(); err != nil {
 		os.Exit(1)
 	}
@@ -118,4 +155,21 @@ func emptyDash(s string) string {
 		return "-"
 	}
 	return s
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	outFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer outFile.Close()
+	if _, err := io.Copy(outFile, in); err != nil {
+		return err
+	}
+	return outFile.Close()
 }

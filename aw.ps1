@@ -3,6 +3,7 @@
 # Usage (PowerShell):
 #   .\aw.ps1 list -r bonsai/yose-db
 #   .\aw.ps1 status -r bonsai/yose-db
+#   .\aw.ps1 compile rakugo-zenza-update -o wf.yaml   (ローカル repo 内で実行)
 #   .\aw.ps1 run rakugo-zenza-update -r bonsai/yose-db --dry-run
 #   .\aw.ps1 logs rakugo-zenza-update -r bonsai/yose-db -o /tmp/awlogs
 #

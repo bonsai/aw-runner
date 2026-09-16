@@ -47,6 +47,7 @@ go build -o aw ./cmd/aw
 
 ./aw list                     # ワークフロー一覧
 ./aw status [pattern]         # ワークフロー状態
+./aw compile <workflow> [-o wf.yaml]  # md → GitHub Actions YAML (gh aw compile)
 ./aw run <workflow>           # dispatch（workflow_dispatch）
 ./aw run <workflow> --dry-run # 実行せずプレビュー
 ./aw run <workflow> --raw-field foo=bar --raw-field env=prod
@@ -54,6 +55,11 @@ go build -o aw ./cmd/aw
 ```
 
 どのコマンドも `-r owner/repo` で対象リポジトリを指定できる（省略時はカレント）。
+`compile` はローカルの workflow md（例: `issue.md`）を `.lock.yml`（＝wf.yaml）へ変換する:
+
+```terminal
+cd <repo> && aw compile some-issue -o wf.yaml
+```
 
 Windows からはランチャー経由で叩ける（WSL 内で自動ビルド + 実行）。
 
