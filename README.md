@@ -55,6 +55,13 @@ go build -o aw ./cmd/aw
 
 どのコマンドも `-r owner/repo` で対象リポジトリを指定できる（省略時はカレント）。
 
+Windows からはランチャー経由で叩ける（WSL 内で自動ビルド + 実行）。
+
+```powershell
+.\aw.ps1 list -r bonsai/yose-db
+powershell -NoProfile -ExecutionPolicy Bypass -File .\aw.ps1 run rakugo-zenza-update -r bonsai/yose-db --dry-run
+```
+
 ## TUI（aw-tui）
 
 `[4] AW` タブで選択リポジトリのワークフロー一覧を表示し、`enter` でプレビュー / `d` で dispatch できる。
